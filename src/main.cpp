@@ -8,35 +8,54 @@
 #include <WiFi.h>
 #include <time.h>
 
-void setup() {
+// 文字描画
+#include <FrameBuffer.h>
+
+// WiFi設定情報をここに記載
+#include <secret.h>
+/* secret.h (shuld be placed in include/secret.h)
+static const char* ssid = "your_ssid";
+static const char* password = "your_password";
+*/
+
+FrameBuffer fb;
+
+void setup() {   
     pinMode(A14, INPUT);  // BUSY
     pinMode(A15, OUTPUT); // RES
     pinMode(A16, OUTPUT); // DC
     pinMode(A17, OUTPUT); // CS
+
     // SPI
     SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
     SPI.begin();
 
-    // Serial
-    Serial.begin(115200);
-    Serial.println("E-Paper Clock");
-
-    // WiFi設定
-    const char* ssid = "your_ssid";
-    const char* password = "your_password";
+    // framebuffer
+    fb.clear(); // 0xFF=白, 0x00=黒
+    fb.println("E-Paper Clock");
+    
+    EPD_Init();
+    EPD_Display(fb.buf);
+    EPD_DeepSleep();
 
     // WiFi接続
     auto connect_wifi = [&]() {
         WiFi.begin(ssid, password);
-        Serial.print("Connecting to WiFi");
+        fb.print("Connecting to WiFi... ");
+        EPD_Init_Fast();
+        EPD_Display(fb.buf);
+        EPD_DeepSleep();
+
         while (WiFi.status() != WL_CONNECTED) {
             delay(500);
-            Serial.print(".");
         }
-        Serial.println();
-        Serial.println("Connected to WiFi");
-        Serial.print("IP address: ");
-        Serial.println(WiFi.localIP());
+
+        fb.println("Done.");
+        fb.print("IP address: ");
+        fb.println(WiFi.localIP().toString());
+        EPD_Init_Fast();
+        EPD_Display(fb.buf);
+        EPD_DeepSleep();
     };
     connect_wifi();
 
@@ -47,18 +66,41 @@ void setup() {
 
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
-    Serial.println("Waiting for time synchronization...");
+    fb.print("NTP server: ");
+    fb.println(ntpServer);
+
+    fb.println("Synchronizing time...");
+    EPD_Init_Fast();
+    EPD_Display(fb.buf);
+    EPD_DeepSleep();
+
     struct tm timeinfo;
     while (!getLocalTime(&timeinfo)) {
-        Serial.println("Time not synchronized yet. Retrying...");
+        EPD_Init_Fast();
+        fb.println("Time not synchronized yet. Retrying...");
+        EPD_Display(fb.buf);
+        EPD_DeepSleep();
         delay(1000);
     }
 
-    Serial.println("Time synchronized successfully.");
+    char timebuf[64], datebuf[64];
+    strftime(timebuf, sizeof(timebuf), "%H:%M:%S", &timeinfo);
+    strftime(datebuf, sizeof(datebuf), "%Y-%m-%d", &timeinfo);
+
+    fb.println("Time synchronized successfully.");
+    fb.print("Current time: ");
+    fb.println(timebuf);
+    fb.print("Current date: ");
+    fb.println(datebuf);
+
+    EPD_Init();
+    EPD_Display(fb.buf);
+    EPD_DeepSleep();
+    delay(2000);
 }
 
 void loop() {
-#if 1 // Full screen update, fast update, and partial update demostration.
+#if 0 // Full screen update, fast update, and partial update demostration.
     /************Full display(3s)*******************/
     EPD_Init();                    // Full screen update initialization.
     EPD_WhiteScreen_ALL(gImage_1); // To Display one image using full screen update.
@@ -92,7 +134,7 @@ void loop() {
         delay(2000); //Delay for 2s.
 
 #endif
-#if 1 // Demo of using partial update to update the full screen, to enable this feature, please change 0 to 1.
+#if 0 // Demo of using partial update to update the full screen, to enable this feature, please change 0 to 1.
     // After 5 partial updates, implement a full screen update to clear the ghosting caused by partial updatees.
     //////////////////////Partial update time demo/////////////////////////////////////
     EPD_Init();                     // Full screen update initialization.

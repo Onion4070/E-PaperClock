@@ -155,20 +155,17 @@ void EPD_Dis_Part(unsigned int x_start, unsigned int y_start, const unsigned cha
     unsigned int datas, i;
     unsigned int x_end, y_end;
 
-    x_end = x_start + PART_LINE - 1;
-    x_end = 400 - x_end;
-    x_start = 400 - x_start;
-
+    x_end = x_start + PART_LINE - 1; 
     y_end = y_start + PART_COLUMN - 1;
-    datas = PART_LINE * PART_COLUMN / 8;
 
+    datas = PART_LINE * PART_COLUMN / 8;
     EPD_W21_WriteCMD(0x91); // This command makes the display enter partial mode
     EPD_W21_WriteCMD(0x90); // resolution setting
-    EPD_W21_WriteDATA(x_end / 256);
-    EPD_W21_WriteDATA(x_end % 256); // x-start
 
     EPD_W21_WriteDATA(x_start / 256);
-    EPD_W21_WriteDATA(x_start % 256 - 1); // x-end
+    EPD_W21_WriteDATA(x_start % 256);   // x-start
+    EPD_W21_WriteDATA(x_end / 256);
+    EPD_W21_WriteDATA(x_end % 256);     // x-end
 
     EPD_W21_WriteDATA(y_start / 256);
     EPD_W21_WriteDATA(y_start % 256); // y-start

@@ -1,3 +1,4 @@
+#pragma once
 #define EPD_W 400
 #define EPD_H 300
 
@@ -104,16 +105,11 @@ static const uint8_t font5x7[][5] PROGMEM = {
     {0x10,0x08,0x08,0x10,0x08}, // '~'
 };
 
+struct Point {
+    int x, y;
+};
+
 class FrameBuffer {
-private:
-    int cursorX, cursorY;   // 現在のカーソル位置
-    int cursorScale;        // 現在の文字スケール
-    int marginX;            // 改行時に戻るX位置
-
-    void setPixel(int x, int y, bool black);
-    void drawChar(int x, int y, char c, int scale = 1);
-    void advanceCursor(int scale);
-
 public:
     uint8_t buf[EPD_W * EPD_H / 8];
 
@@ -123,13 +119,20 @@ public:
     void fill(uint8_t color);
     void clear();
 
-    void setCursor(int x, int y);
-    void setScale(int scale);
-    void setMargin(int x);          // 改行時のX位置 (デフォルト0)
-    void print(char c);
-    void print(const char* str);
-    void print(const String& str);
-    void println(const char* str);
-    void println(const String& str);
-    void println();
+    // ----- 図形描画 -----
+    void drawRect(int x, int y, int w, int h);
+    void drawLine(int x0, int y0, int x1, int y1, int thickness = 1);
+    void drawFilledPolygon(Point points[], int numPoints, bool black = true);
+    
+    void drawChar(int x, int y, char c);
+    void drawString(int x, int y, const char* str, int scale);
+    void blitImage(int x, int y, int w, int h, const uint8_t* img, int scale = 1);
+
+private:
+    int cursorX, cursorY;   // 現在のカーソル位置
+    int marginX;            // 改行時に戻るX位置
+
+    void setPixel(int x, int y, bool black);
+
+    void drawLine1(int x0, int y0, int x1, int y1);
 };

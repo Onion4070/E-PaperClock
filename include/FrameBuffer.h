@@ -1,8 +1,6 @@
 #pragma once
-#define EPD_W 400
-#define EPD_H 300
-
-#include <Arduino.h>
+#include "Display_EPD_W21.h"
+#include <pgmspace.h>
 
 // ============================================================
 // 5x7 ASCII bit font (printable 0x20〜0x7E)
@@ -111,13 +109,14 @@ struct Point {
 
 class FrameBuffer {
 public:
-    uint8_t buf[EPD_W * EPD_H / 8];
+    uint8_t buf[EPD_WIDTH * EPD_HEIGHT / 8];
 
     FrameBuffer();
     ~FrameBuffer();
 
     void fill(uint8_t color);
     void clear();
+    void clear(int x, int y, int w, int h);
 
     // ----- 図形描画 -----
     void drawRect(int x, int y, int w, int h);
@@ -126,7 +125,7 @@ public:
     
     void drawChar(int x, int y, char c);
     void drawString(int x, int y, const char* str, int scale);
-    void blitImage(int x, int y, int w, int h, const uint8_t* img, int scale = 1);
+    void blitImage(int x, int y, int w, int h, const uint8_t* img);
 
 private:
     int cursorX, cursorY;   // 現在のカーソル位置

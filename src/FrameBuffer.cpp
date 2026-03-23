@@ -1,6 +1,8 @@
 #include "FrameBuffer.h"
 
 #include <string.h>
+#include <math.h>
+#include <algorithm>
 
 FrameBuffer::FrameBuffer() {
     cursorX = 0;
@@ -15,11 +17,22 @@ void FrameBuffer::fill(uint8_t color) {  // 0xFF=白, 0x00=黒
     memset(buf, color, sizeof(buf));
 }
 
-void FrameBuffer::clear() { fill(0xFF); }
+void FrameBuffer::clear() { 
+    fill(0xFF); 
+}
+
+void FrameBuffer::clear(int x, int y, int w, int h) {
+    const int bytes_per_row = EPD_WIDTH / 8;
+    for (int i = y; i < y + h; i++) {
+        for (int j = x / 8; j < (x + w) / 8; j++) {
+            buf[i * bytes_per_row + j] = 0xFF;
+        }
+    }
+}
 
 void FrameBuffer::setPixel(int x, int y, bool black) {
-    if (x < 0 || x >= EPD_W || y < 0 || y >= EPD_H) return;
-    int idx = y * (EPD_W / 8) + x / 8;
+    if (x < 0 || x >= EPD_WIDTH || y < 0 || y >= EPD_HEIGHT) return;
+    int idx = y * (EPD_WIDTH / 8) + x / 8;
     uint8_t bit = 0x80 >> (x % 8);
     if (black)
         buf[idx] &= ~bit;  // 0=黒
@@ -145,17 +158,14 @@ void FrameBuffer::drawRect(int x, int y, int w, int h) {
     }
 }
 
-void FrameBuffer::blitImage(int x, int y, int w, int h, const uint8_t* img, int scale) {
+void FrameBuffer::blitImage(int x, int y, int w, int h, const uint8_t* img) {
     int bytesPerRow = (w + 7) / 8;
     for (int row = 0; row < h; row++) {
         for (int col = 0; col < w; col++) {
             int byteIndex = row * bytesPerRow + col / 8;
             int bitIndex  = 7 - (col % 8);
             bool black    = !((img[byteIndex] >> bitIndex) & 1);
-
-            for (int sy = 0; sy < scale; sy++)
-                for (int sx = 0; sx < scale; sx++)
-                    setPixel(x + col*scale + sx, y + row*scale + sy, black);
+            setPixel(x + col, y + row, black);
         }
     }
 }

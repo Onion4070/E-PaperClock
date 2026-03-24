@@ -1,6 +1,6 @@
 #include "ClockWidget.h"
-#include "images.h"
 #include <Display_EPD_W21.h>
+#include <time.h>
 
 ClockWidget::ClockWidget(FrameBuffer& fb) : fb(fb) {
     is_first_update = true;
@@ -10,11 +10,20 @@ ClockWidget::~ClockWidget() {
 
 }
 
+// 時計を更新して描画
+// EPD_SetRAMValue_BaseMap()を予め実行すること
 void ClockWidget::update(struct tm* timeinfo) {
     if (timeinfo == nullptr) return;
 
-    Serial.println("Clear buffer");
-    fb.clear(0, 0, EPD_W, FONT_HEIGHT);
+    bool hour_changed = (timeinfo->tm_hour != last_hour);
+    bool min_changed  = (timeinfo->tm_min  != last_min);
+
+    last_hour = timeinfo->tm_hour;
+    last_min = timeinfo->tm_min;
+
+    if (!hour_changed && !min_changed) return;
+
+    fb.clear(0, 0, EPD_WIDTH, FONT_HEIGHT);
 
     // 23:45 -> h1 = 2, h2 = 3, m1 = 4, m2 = 5
     int h1 = timeinfo->tm_hour / 10;
@@ -22,35 +31,31 @@ void ClockWidget::update(struct tm* timeinfo) {
     int m1 = timeinfo->tm_min / 10;
     int m2 = timeinfo->tm_min % 10;
 
-    int spacing = 16; // 文字間の隙間
-    int x = 16;       // 書き出し位置
-    int y = 0;
-
-    // EPD_SetRAMValue_BaseMap()を予め実行すること
-    EPD_Init_Part(); 
-    
-    Serial.println("Writing to buffer");
     // hour
-    int h1_offset = x;
-    int h2_offset = h1_offset + FONT_WIDTH + spacing;
-    
     fb.blitImage(h1_offset, y, FONT_WIDTH, FONT_HEIGHT, font[h1].data);
     fb.blitImage(h2_offset, y, FONT_WIDTH, FONT_HEIGHT, font[h2].data);
 
     // colon
-    int colon_offset = h2_offset + FONT_WIDTH + spacing;
     fb.blitImage(colon_offset, y, COLON_WIDTH, COLON_HIGHT, font[10].data);
-    
+
     // minute
-    int m1_offset = colon_offset + COLON_WIDTH + spacing;
-    int m2_offset = m1_offset + FONT_WIDTH + spacing;
     fb.blitImage(m1_offset, y, FONT_WIDTH, FONT_HEIGHT, font[m1].data);
     fb.blitImage(m2_offset, y, FONT_WIDTH, FONT_HEIGHT, font[m2].data);
-    
-    Serial.println("Writing to EPD");
+
+    // Fast Refreshでゴースト抑制
+    if (partial_count++ >= FAST_REFRESH_THRESHOLD) {
+        EPD_Init_Fast();
+        EPD_Display(fb.buf);
+        EPD_DeepSleep();
+        partial_count = 0;
+        return;
+    }
+
     unsigned char mode = is_first_update ? 0 : 1;
+
+    EPD_Init_Part();
     EPD_Dis_Part(0, 0, fb.buf, FONT_HEIGHT, EPD_WIDTH, mode);
     EPD_DeepSleep();
-    
+
     is_first_update = false;
 }

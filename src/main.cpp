@@ -113,14 +113,9 @@ void setup() {
     EPD_SetRAMValue_BaseMap(fb.buf);
 }
 
-
 void loop() {
     if (getLocalTime(&timeinfo)) {
-        static int last_min = -1;
-        if (timeinfo.tm_min != last_min) {
-            last_min = timeinfo.tm_min;
-            cw.update(&timeinfo);
-        }
+        cw.update(&timeinfo);
     }
-    delay(10);
+    delay(50);
 }

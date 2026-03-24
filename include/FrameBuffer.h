@@ -1,6 +1,7 @@
 #pragma once
 #include "Display_EPD_W21.h"
 #include <pgmspace.h>
+#include <cstdint>
 
 // ============================================================
 // 5x7 ASCII bit font (printable 0x20〜0x7E)
